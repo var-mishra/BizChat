@@ -16,7 +16,8 @@ const httpServer = createServer(app);
 // ✅ SOCKET.IO WITH CORS (FIXED)
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173", // ✅ React app
+    origin: process.env.CLIENT_URL,
+    credentials: true,    // ✅ React app
     methods: ["GET", "POST"],
   },
 });
