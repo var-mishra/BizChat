@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat App</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+    }
+
+    /* ✅ MAIN LAYOUT */
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ✅ SIDEBAR */
+    .sidebar {
+      width: 30%;
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      overflow-y: auto;
+      background: #f7f7f7;
+    }
+
+    .sidebar li {
+      cursor: pointer;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .sidebar li:hover {
+      background: #eaeaea;
+    }
+
+    /* ✅ CHAT AREA */
+    .chatArea {
+      width: 70%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #chatBox {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      background: #efeae2;
+    }
+
+    /* ✅ MESSAGE BUBBLES */
+    .message {
+      max-width: 60%;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .sent {
+      align-self: flex-end;
+      background: #dcf8c6;
+    }
+
+    .received {
+      align-self: flex-start;
+      background: #ffffff;
+    }
+
+    /* ✅ INPUT AREA */
+    .inputArea {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+      background: #f0f0f0;
+    }
+
+    .inputArea input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .inputArea button {
+      margin-left: 10px;
+      padding: 10px;
+    }
+
+    #typingIndicator {
+      padding-left: 10px;
+      font-style: italic;
+      height: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2 style="margin-left:10px;">Chat App</h2>
+
+<div class="container">
+
+  <!-- ✅ SIDEBAR -->
+  <div class="sidebar">
+    <h3>Online Users</h3>
+    <ul id="onlineUsers"></ul>
+  </div>
+
+  <!-- ✅ CHAT AREA -->
+  <div class="chatArea">
+
+    <p id="typingIndicator"></p>
+
+    <div id="chatBox"></div>
+
+    <div class="inputArea">
+      <input id="msg" placeholder="Type message" />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+const socket = io("http://localhost:3000");
+
+const myUserId = prompt("Enter your user ID")?.trim().toLowerCase();
+let selectedUser = null;
+
+const chatBox = document.getElementById("chatBox");
+const onlineUsersList = document.getElementById("onlineUsers");
+const typingIndicator = document.getElementById("typingIndicator");
+const input = document.getElementById("msg");
+
+let typingTimeout;
+
+/* ✅ MESSAGE UI */
+function addMessage(sender, message, status = "", id = null) {
+  const div = document.createElement("div");
+
+  div.classList.add("message");
+
+  if (sender === myUserId) {
+    div.classList.add("sent");
+  } else {
+    div.classList.add("received");
+  }
+
+  let text =
+    sender === myUserId
+      ? `You: ${message}`
+      : `${sender}: ${message}`;
+
+  if (sender === myUserId) {
+    if (status === "sent") text += " ✔";
+    if (status === "delivered") text += " ✔✔";
+    if (status === "seen") text += " ✔✔ ✅";
+  }
+
+  div.textContent = text;
+
+  if (id) {
+    div.setAttribute("data-id", id);
+  }
+
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+/* ✅ LOAD CHAT */
+async function loadChat() {
+  if (!selectedUser) return;
+
+  const res = await fetch(
+    `http://localhost:3000/api/messages/${myUserId}/${selectedUser}`
+  );
+
+  const messages = await res.json();
+
+  messages.forEach(msg => {
+    addMessage(msg.senderId, msg.message, msg.status, msg._id);
+  });
+}
+
+/* ✅ CONNECT */
+socket.on("connect", () => {
+  socket.emit("join", myUserId);
+});
+
+/* ✅ SEND */
+function sendMessage() {
+  const msg = input.value.trim();
+  if (!msg || !selectedUser) return;
+
+  socket.emit("send_message", {
+    senderId: myUserId,
+    receiverId: selectedUser,
+    message: msg,
+  });
+
+  input.value = "";
+}
+
+/* ✅ RECEIVE */
+socket.on("receive_message", (data) => {
+  addMessage(data.senderId, data.message, data.status, data._id);
+});
+
+/* ✅ USERS */
+socket.on("online_users", (users) => {
+  onlineUsersList.innerHTML = "";
+
+  users.forEach(user => {
+    const li = document.createElement("li");
+    li.textContent = user;
+
+    li.onclick = () => {
+      selectedUser = user;
+      chatBox.innerHTML = "";
+      loadChat();
+
+      socket.emit("mark_seen", {
+        senderId: selectedUser,
+        receiverId: myUserId,
+      });
+    };
+
+    if (user === myUserId) {
+      li.style.fontWeight = "bold";
+    }
+
+    onlineUsersList.appendChild(li);
+  });
+});
+
+/* ✅ TYPING */
+input.addEventListener("input", () => {
+  if (!selectedUser) return;
+
+  socket.emit("typing", {
+    senderId: myUserId,
+    receiverId: selectedUser,
+  });
+
+  clearTimeout(typingTimeout);
+
+  typingTimeout = setTimeout(() => {
+    socket.emit("stop_typing", {
+      senderId: myUserId,
+      receiverId: selectedUser,
+    });
+  }, 1000);
+});
+
+socket.on("typing", (senderId) => {
+  if (senderId === selectedUser) {
+    typingIndicator.textContent = `${senderId} is typing...`;
+  }
+});
+
+socket.on("stop_typing", () => {
+  typingIndicator.textContent = "";
+});
+
+/* ✅ SEEN */
+socket.on("messages_seen", () => {
+  const messages = document.querySelectorAll("[data-id]");
+
+  messages.forEach(msgDiv => {
+    if (msgDiv.textContent.startsWith("You:")) {
+      let cleanText = msgDiv.textContent
+        .replace(" ✔✔ ✅", "")
+        .replace(" ✔✔", "")
+        .replace(" ✔", "");
+
+      msgDiv.textContent = cleanText + " ✔✔ ✅";
+    }
+  });
+});
+</script>
+
+</body>
+</html>
