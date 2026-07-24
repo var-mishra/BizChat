@@ -14,17 +14,23 @@ connectDb();
 const httpServer = createServer(app);
 
 // ✅ SOCKET.IO WITH CORS (FIXED)
+// const io = new Server(httpServer, {
+//   cors: {
+//     origin: [process.env.CLIENT_URL,
+//       "http://localhost:5173",
+//       "https://biz-chat-sigma.vercel.app",
+//     ],
+//     credentials: true,    // ✅ React app
+//     methods: ["GET", "POST"],
+//   },
+// });
 const io = new Server(httpServer, {
   cors: {
-    origin: [process.env.CLIENT_URL,
-      "http://localhost:5173",
-      "https://biz-chat-sigma.vercel.app",
-    ],
-    credentials: true,    // ✅ React app
+    origin: true,
+    credentials: true,
     methods: ["GET", "POST"],
   },
 });
-
 // ✅ attach socket logic
 setupSocket(io);
 
