@@ -52,7 +52,7 @@ function ChatArea({ myUserId, selectedUser }) {
     async function loadChat() {
       if (!selectedUser) return;
       const res = await fetch(
-        `http://localhost:3000/api/messages/${myUserId}/${selectedUser}`
+        `${import.meta.env.VITE_API_URL}/api/messages/${myUserId}/${selectedUser}`
       );
       const data = await res.json();
       setMessages(data);
@@ -81,7 +81,7 @@ function ChatArea({ myUserId, selectedUser }) {
         const formData = new FormData();
         formData.append("file", audioBlob, `voice-${Date.now()}.webm`);
 
-        const uploadRes = await fetch("http://localhost:3000/api/upload", {
+        const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
           method: "POST",
           body: formData,
         });
@@ -125,7 +125,7 @@ function ChatArea({ myUserId, selectedUser }) {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const uploadRes = await fetch("http://localhost:3000/api/upload", {
+      const uploadRes = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
         method: "POST",
         body: formData,
       });

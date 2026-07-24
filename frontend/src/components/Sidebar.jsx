@@ -15,7 +15,7 @@ function Sidebar({ myUserId, selectedUser, setSelectedUser }) {
   // FETCH USERS
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/users");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users`);
       const data = await res.json();
       setUsers(data.filter((user) => user.username !== myUserId));
     } catch (err) {
@@ -27,7 +27,7 @@ function Sidebar({ myUserId, selectedUser, setSelectedUser }) {
   const fetchConversations = async () => {
     try {
       const res = await fetch(
-        `http://localhost:3000/api/messages/conversations/${myUserId}`,
+        `${import.meta.env.VITE_API_URL}/api/messages/conversations/${myUserId}`,
         {
           headers: {
             Authorization: token,
@@ -68,7 +68,7 @@ function Sidebar({ myUserId, selectedUser, setSelectedUser }) {
   // ✅ LOGOUT
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:3000/api/auth/logout", {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -169,7 +169,7 @@ function Sidebar({ myUserId, selectedUser, setSelectedUser }) {
                 setSelectedUser(otherUser);
                 localStorage.setItem("selectedUser", otherUser);
 
-                await fetch(`http://localhost:3000/api/messages/mark-seen`, {
+                await fetch(`${import.meta.env.VITE_API_URL}/api/messages/mark-seen`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",

@@ -178,7 +178,7 @@ async function loadChat() {
   if (!selectedUser) return;
 
   const res = await fetch(
-    `http://localhost:3000/api/messages/${myUserId}/${selectedUser}`
+    `${import.meta.env.VITE_API_URL}/api/messages/${myUserId}/${selectedUser}`
   );
 
   const messages = await res.json();
